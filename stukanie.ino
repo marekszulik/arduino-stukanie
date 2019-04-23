@@ -1,49 +1,45 @@
 #include "lib/Led/Led.cpp"
 #include "lib/Buzzer/Buzzer.cpp"
 
-const int ledPin = 10;
-const int buzzerPin = 11;
-const int soundSensorPin = 12;
+#include <Stepper.h>
 
-const int BUZZING_TIME = 2000;
-const int IDLE_TIME = 5000;
+#define STEPS 128
 
-Led led(ledPin);
-Buzzer buzzer(buzzerPin);
+const int IDLE_TIME = 180 * 1000;
+const int RIDE_TIME = 30 * 1000;
+const int SOUND_SENSOR_PIN = 7;
+const int MOVEMENT_DISTANCE = 15000;
 
-int lastSoundTime = 0;
-bool buzzerStart = false;
-bool buzzerStarted = false;
-int ledToggleTime = 0;
-int buzzerStartedTime = 0;
+Stepper stepper (STEPS, 2, 4, 3, 5);
+
+long lastSoundTime = 0;
+bool shouldMove = false;
+bool moving = false;
+long movementForwardTime = 0;
 
 void setup() {
-  pinMode(soundSensorPin, INPUT);
+  pinMode(SOUND_SENSOR_PIN, INPUT);
+  stepper.setSpeed(200);
 }
 
 void loop() {
-  int soundHigh = digitalRead(soundSensorPin);
-  if (soundHigh && millis() - lastSoundTime > IDLE_TIME) {
+  int soundHigh = digitalRead(SOUND_SENSOR_PIN);
+  if (!shouldMove && soundHigh && (millis() - lastSoundTime > IDLE_TIME || lastSoundTime == 0)) {
     lastSoundTime = millis();
-    buzzerStart = true;
+    shouldMove = true;
   }
 
-  if (buzzerStart) {
-    if (millis() - ledToggleTime > 50) {
-      led.toggle();
-      ledToggleTime = millis();
+  if (shouldMove) {
+    if (!moving) {
+      moving = true;
+      movementForwardTime = millis();
+      stepper.step(-MOVEMENT_DISTANCE);
+      stepper.step(MOVEMENT_DISTANCE);
     }
 
-    if (!buzzerStarted) {
-      buzzer.playSound(20000, BUZZING_TIME);
-      buzzerStartedTime = millis();
-      buzzerStarted = true;
-    }
-
-    if (millis() - buzzerStartedTime > BUZZING_TIME) {
-      buzzerStarted = false;
-      buzzerStart = false;
-      led.off();
+    if (moving && millis() - movementForwardTime > RIDE_TIME) {
+      shouldMove = false;
+      moving = false;
     }
   }
 }
