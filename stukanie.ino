@@ -20,7 +20,7 @@ long lastSoundTime = 0;
 
 void setup() {
   pinMode(SOUND_SENSOR_PIN, INPUT);
-  stepper.setSpeed(STEPS);
+  stepper.setSpeed(200);
 }
 
 void loop() {
